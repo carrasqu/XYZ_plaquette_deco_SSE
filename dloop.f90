@@ -285,21 +285,21 @@ real(kind=8)tri(2),tri0(2),trir(2),datatri(2),data2tri(2)
 
  !read(10,*) dd
  dd=2 ! works only for the kagome
- 
- read(10,*) lx 
- read(10,*) ly
- !read(10,*) lz 
 
- read(10,*) beta
- read(10,*) mu
- read(10,*) t
- read(10,*) t2 
- read(10,*) tp
- read(10,*) tp2
- read(10,*) Jz
- read(10,*) Jz2
- read(10,*) nbins
- read(10,*) msteps
+ ! Hamiltonian 
+ read(10,*) lx ! linear dimension ax 
+ read(10,*) ly !linear dimension ay
+ read(10,*) beta ! inverse temperature
+ read(10,*) mu ! chemical potential/magnetic field Sz
+ read(10,*) t ! transverse exchange S+S- triangle up
+ read(10,*) t2 !   transverse exchange S+S- triangle down on the kagome lattice
+ read(10,*) tp ! transverse exchange S+S+ + S-S-  triangle up
+ read(10,*) tp2 ! transverse exchange S+S+ + S-S- triangle down on the kagome lattice
+ read(10,*) Jz ! Jz triangle up
+ read(10,*) Jz2 ! Jz triangle downi
+!! MC parameters described below
+ read(10,*) nbins 
+ read(10,*) msteps  
  read(10,*) sqmeas 
  read(10,*) isteps
  read(10,*) iseedd
@@ -359,7 +359,7 @@ real(kind=8)tri(2),tri0(2),trir(2),datatri(2),data2tri(2)
 
  call makelattice()  !construct the lattice
  
- call newvertex()  
+ call newvertex() ! constructs allowed vertices in the SSE expansion 
 
  aprob=beta*nb
 
@@ -381,7 +381,7 @@ real(kind=8)tri(2),tri0(2),trir(2),datatri(2),data2tri(2)
 
  ! this bit makes a different seed for each processor
 
- call date_and_time(values=values)
+ call date_and_time(values=values) ! initializing from SYSTEM
 
  call random_seed(size=k)
  allocate(seed(1:k))
@@ -389,6 +389,8 @@ real(kind=8)tri(2),tri0(2),trir(2),datatri(2),data2tri(2)
  call random_seed(put=seed)
  call random_number(r)
 
+
+ ! distributing different random numbers to all processors
  irstart=0
   do k=1,rank+2
    call random_number(r)
@@ -404,7 +406,7 @@ real(kind=8)tri(2),tri0(2),trir(2),datatri(2),data2tri(2)
 
  ! write(6,*) 'seed',  iseedd,rank
 
- call rand_init(iseedd) ! initializaation of random number
+ call rand_init(iseedd) ! initializaation of random number, different on each processor, as it should be
   
  if(restart==0)then
 
@@ -419,14 +421,16 @@ real(kind=8)tri(2),tri0(2),trir(2),datatri(2),data2tri(2)
 ! write(6,*)'epsdis',epsdis,rank
 !----------------------------------------------------------------------
 
-  nl=200
-  maxloop=30000
-  avn=0.0d0
-  avt=0.0d0
+  nl=200 ! initial guess for the expansion order
+  maxloop=30000 ! maximum number of loops
+  avn=0.0d0 ! average expansion order
+  avt=0.0d0 ! average loop legnth
+  !useful for profiling, debugging, and timing 
   timeli=0.0d0
   timelo=0.0d0  
   timeme=0.0d0
-  timew=0.0d0 
+  timew=0.0d0
+  ! parameters used during the thermalization for accelerating the adjustment of  the nl parameter 
   con=2.0d0
   front=10
   countones=0
@@ -439,8 +443,9 @@ real(kind=8)tri(2),tri0(2),trir(2),datatri(2),data2tri(2)
   do  !k=1,isteps ( now it is automatic)
    do m=1,msteps
 
-    call diagonalupdate()
-    call loopupdate()
+    call diagonalupdate() ! performos diagonal update
+    call loopupdate() ! performs loop update
+
     ! collects the maximum nh in order to enlarge the cutoff
     call mpi_allreduce(nh,nh0,1,mpi_integer4,mpi_max,mpi_comm_world,ierr)
     call adjustcutoff(k)
@@ -449,8 +454,8 @@ real(kind=8)tri(2),tri0(2),trir(2),datatri(2),data2tri(2)
 
    end do
   
-    avn=avn/dble(msteps)
-    avt=avt/dble(msteps)    
+    avn=avn/dble(msteps) !average expansion order <n> 
+    avt=avt/dble(msteps) ! average loop length   
 
     call mpi_reduce(avn,avn0,1,mpi_real8,mpi_sum,0,mpi_comm_world,ierr)
     call mpi_reduce(avt,avt0,1,mpi_real8,mpi_sum,0,mpi_comm_world,ierr)
@@ -467,10 +472,12 @@ real(kind=8)tri(2),tri0(2),trir(2),datatri(2),data2tri(2)
     ! end if
      if(rank==0)then
 
+      !averaging over the different processors and collecting at master node
       avn0=avn0/dble(size)
       avt0=avt0/dble(size)
       write(6,*)'avn,avt', avn0,avt0,nl,kkk
 
+      ! adjusting number of loops
       if(con*avn0-avt0>0)then
        nl=nl+ceiling(front*abs(con*avn0-avt0)/abs(con*avn0+avt0))
        write(6,*)'add', front*abs(con*avn0-avt0)/abs(con*avn0+avt0),countones
@@ -490,6 +497,7 @@ real(kind=8)tri(2),tri0(2),trir(2),datatri(2),data2tri(2)
      avt0=0.0d0
     end if
 
+    !broadcasting the new parameters to all the nodes 
     call mpi_bcast(nl,1,mpi_integer4,0,mpi_comm_world,ierr)
     call mpi_bcast(maxloop,1,mpi_integer8,0,mpi_comm_world,ierr)
     call mpi_bcast(countonesD,1,mpi_integer4,0,mpi_comm_world,ierr)
@@ -519,7 +527,7 @@ real(kind=8)tri(2),tri0(2),trir(2),datatri(2),data2tri(2)
   end if
 
 
- elseif(restart==1)then
+ elseif(restart==1)then ! restarting the code: starts from an thermalized configuration and averages saving the thermalization process
 
   call restarts(iseedd,rank)
 
@@ -562,7 +570,7 @@ real(kind=8)tri(2),tri0(2),trir(2),datatri(2),data2tri(2)
 
   end do
   
-  
+  ! collects, summarizes and writes the current results to disk 
   call writeresults(msteps,k,size,rank,nbins,iseeddcopy)
 
  

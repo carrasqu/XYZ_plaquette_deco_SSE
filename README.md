@@ -2,8 +2,7 @@
 
 Performs SSE for the XYZ model on the Kagome lattice
 
--lattice_so.f Generates lattices
--dloop.f90 performs a Stochastic Series Expansion (SSE) QMC algorithm in the global Sz basis designed 
+-dloop.f90 is the main program.  It performs a Stochastic Series Expansion (SSE) QMC algorithm in the global Sz basis designed 
 to study the XYZ Hamiltonian at finite temperature using a 2+1-dimensional simulation cell. The code makes use
 of the MPI library. Within the SSE, the Hamiltonian was implemented with a triangular plaquette breakup, which helps 
 ergodicity in the regime where Jz/J±± is large. Using this Hamiltonian breakup, the standard SSE-directed 
@@ -15,4 +14,6 @@ small clusters with exact diagonalization data. The code computes
 
 -random.c is an efficient random number generator (obtained from someone years ago)
 
--The other files implement a sorting algorithm used in the solutions of the directed loop equations 
+-The other files implement a sorting algorithm used in the solutions of the directed loop equations
+
+-lattice_so.f Generates lattices 

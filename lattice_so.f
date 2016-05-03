@@ -1,4 +1,5 @@
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+c written by Federico Becca
 c  Given two primitive vectors and the two translations defining the box
 c  the program finds:
 c  1) all the (rigid) spatial symmetries of the infinite lattice: 
